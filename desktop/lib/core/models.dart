@@ -1034,6 +1034,7 @@ class AgentVerdict {
     this.errors = 0,
     this.warnings = 0,
     this.artifact,
+    this.preview,
     this.phases = const [],
     this.updatedAt,
   });
@@ -1048,6 +1049,10 @@ class AgentVerdict {
 
   /// Workspace-relative path of the primary thing to look at, when the harness named one.
   final String? artifact;
+
+  /// The page the agent serves itself on its machine (`http://127.0.0.1:5173/`), which the viewer shows
+  /// once it answers: the address its pages have there.
+  final String? preview;
 
   /// Where the work is, in order — at most twelve; empty when the harness
   /// names no phases, and then the header draws no strip.
@@ -1081,6 +1086,7 @@ class AgentVerdict {
       errors: _safeCount(raw['errors']),
       warnings: _safeCount(raw['warnings']),
       artifact: _safeText(raw['artifact'], 1024),
+      preview: _safeText(raw['preview'], 2048),
       phases: _phases(raw['phases']),
       updatedAt: updated is String ? DateTime.tryParse(updated) : null,
     );
@@ -1111,6 +1117,7 @@ class AgentVerdict {
       other.errors == errors &&
       other.warnings == warnings &&
       other.artifact == artifact &&
+      other.preview == preview &&
       listEquals(other.phases, phases) &&
       other.updatedAt == updatedAt;
 
@@ -1121,6 +1128,7 @@ class AgentVerdict {
     errors,
     warnings,
     artifact,
+    preview,
     Object.hashAll(phases),
     updatedAt,
   );
