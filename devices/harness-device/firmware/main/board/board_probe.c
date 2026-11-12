@@ -6,7 +6,11 @@
 
 #include "board_i2c.h"
 #include "board_pins.h"
+#if BOARD_TRGB
+#include "xl9555.h"
+#else
 #include "driver/gpio.h"
+#endif
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_touch_cst816s.h"
 #include "esp_lcd_touch_cst9217.h"
@@ -27,6 +31,7 @@ static void scan(const char *when)
     ESP_LOGI(TAG, "%s: ack%s", when, n ? line : " (none)");
 }
 
+#if !BOARD_TRGB
 static void pulse(int pin)
 {
     gpio_config_t io = { .pin_bit_mask = 1ULL << pin, .mode = GPIO_MODE_OUTPUT };
@@ -35,6 +40,7 @@ static void pulse(int pin)
     gpio_set_level(pin, 1); vTaskDelay(pdMS_TO_TICKS(50));
     ESP_LOGI(TAG, "pulsed reset on GPIO%d", pin);
 }
+#endif
 
 // Open one touch driver on one reset pin and sample it a few times, idle. Says whether the chip answers,
 // what its id is, and — the part touch.c cares about — what read_data returns with no finger down.
@@ -47,7 +53,7 @@ static void try_touch(const char *name, int rst, bool cst816s)
     io_cfg.scl_speed_hz = BSP_I2C_FREQ_HZ;
     if (esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io) != ESP_OK) { ESP_LOGW(TAG, "%s: panel io failed", name); return; }
     esp_lcd_touch_config_t cfg = {
-        .x_max = 466, .y_max = 466, .rst_gpio_num = rst, .int_gpio_num = BSP_TOUCH_INT,
+        .x_max = BSP_LCD_H_RES, .y_max = BSP_LCD_V_RES, .rst_gpio_num = rst, .int_gpio_num = BSP_TOUCH_INT,
         .flags = { .swap_xy = 0, .mirror_x = 0, .mirror_y = 0 },
     };
     esp_lcd_touch_handle_t tp = NULL;
@@ -72,6 +78,18 @@ void board_probe_run(void)
 {
     ESP_LOGW(TAG, "=== BOARD PROBE (not a release image) ===");
     scan("before any reset");
+#if BOARD_TRGB
+    xl9555_init();
+    xl9555_panel_power_on();
+    xl9555_lcd_reset();
+    xl9555_touch_reset();
+    scan("after expander resets");
+    // CST820 (full circle) answers at 0x15 through the CST816S driver; FT3267 (half circle) at
+    // 0x38 has no esp_lcd_touch driver yet, so a full-range scan above is what finds it.
+    try_touch("CST816S-driver@0x15", -1, true);
+    ESP_LOGW(TAG, "=== PROBE DONE — touch these 10s: ===");
+    try_touch("CST816S-driver@0x15", -1, true);
+#else
     pulse(39); pulse(40);   // board A's LCD / touch reset
     scan("after 39/40");
     pulse(1);  pulse(2);    // board B's LCD / touch reset
@@ -85,5 +103,6 @@ void board_probe_run(void)
     // One more pass with a finger, on whichever driver answered, to see a press.
     try_touch("CST816S", 2, true);
     try_touch("CST9217", 40, false);
+#endif
     ESP_LOGW(TAG, "=== END ===");
 }

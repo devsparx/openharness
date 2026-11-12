@@ -1,0 +1,13 @@
+# LilyGo T-RGB overlay. Select with:
+#   idf.py -B build-trgb -DTRGB_BOARD=1 \
+#     -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.esp32s3;sdkconfig.defaults.trgb" build
+#
+# The board variant itself comes from -DTRGB_BOARD=1 (a compile definition, not Kconfig — see
+# main/CMakeLists.txt). This overlay carries only the sdkconfig the T-RGB build needs beyond the
+# dial defaults:
+#
+# The ST7701S framebuffer lives in PSRAM and this firmware also runs code/rodata from PSRAM
+# (sdkconfig.defaults.esp32s3), so the LCD bounce-buffer refill ISR must stay IRAM-resident: a
+# cache miss mid-refill underruns the RGB FIFO and shows up as doubled pixels and color fringes
+# on the glass. Espressif documents CONFIG_LCD_RGB_ISR_IRAM_SAFE for exactly this.
+CONFIG_LCD_RGB_ISR_IRAM_SAFE=y

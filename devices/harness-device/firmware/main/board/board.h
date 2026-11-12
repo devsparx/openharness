@@ -17,7 +17,10 @@
 
 // GT911 is the Pro's, and it is never the ANSWER to a probe — that board has one controller and knows
 // it at build time (board_pro.c). It is in this enum so the shared log line and `hello.hw` can name it.
-typedef enum { TOUCH_NONE = 0, TOUCH_CST9217, TOUCH_CST816S, TOUCH_GT911 } touch_chip_t;
+// CST820 is the LilyGo T-RGB's full-circle touch chip, driven by the in-tree driver in
+// touch_cst820.c (the stock CST816S component driver fails on it: the chip auto-sleeps and NAKs
+// the ID read that driver does before any wake-up register write).
+typedef enum { TOUCH_NONE = 0, TOUCH_CST9217, TOUCH_CST816S, TOUCH_GT911, TOUCH_CST820 } touch_chip_t;
 
 typedef struct {
     const char  *name;          // goes up the cable in `hello.hw`, and into the boot log
@@ -26,6 +29,7 @@ typedef struct {
     touch_chip_t touch;
     bool         touch_mirror;  // CST9217 is mounted 180° to the panel; CST816S reports panel-aligned
     bool         has_pmic;      // AXP2101 answered: battery figures + the PWR key exist
+    int          mclk_gpio;     // I2S master clock: GPIO 42 on retail Waveshare, GPIO 16 on custom PCB, -1 on TRGB
 } board_t;
 
 // Probe the bus and fill in the board. Call FIRST in app_main, before display_init() — the panel

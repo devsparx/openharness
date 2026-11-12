@@ -969,6 +969,7 @@ export class DaemonCableHost implements CableHost {
           'content-type': `multipart/form-data; boundary=${boundary}`,
         },
         body,
+        signal: AbortSignal.timeout(15_000),
       })
 
     let token = await accessToken()

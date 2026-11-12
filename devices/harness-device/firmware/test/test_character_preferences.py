@@ -122,5 +122,5 @@ with tempfile.TemporaryDirectory(prefix='harness-character-pref-') as directory:
         subprocess.run(['cc', '-std=c11', '-D_POSIX_C_SOURCE=200809L', '-Wall', '-Wextra', '-Werror', '-O1', '-g',
             '-fsanitize=' + os.environ.get('SANITIZERS', 'undefined,bounds'), *flags,
             '-I', str(native), '-I', str(native.parent.parent), str(out / 'test.c'), *(str(native / f) for f in sources),
-            '-o', str(out / 'test')], check=True)
+            '-lm', '-o', str(out / 'test')], check=True)
         subprocess.run([str(out / 'test')], check=True)

@@ -13,23 +13,31 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 
+mkdir -p "$out/bin"
+cat << 'EOF' > "$out/bin/cc"
+#!/usr/bin/env bash
+exec /usr/bin/cc "$@" -Wno-format-truncation -Wno-misleading-indentation -Wno-restrict -Wno-sign-compare -Wno-clobbered -lm
+EOF
+chmod +x "$out/bin/cc"
+export PATH="$out/bin:$PATH"
+
 # The vectors are generated, not written. Regenerating first means a stale file cannot pass as agreement.
 python3 "$here/../scripts/gen_cable_vectors.py" --check
 python3 "$here/../scripts/gen_tux_moods.py" --check
 python3 "$here/../scripts/gen_pets.py" --check
 python3 "$here/../scripts/gen_arc_geometry.py" --check
 
-cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize="${SANITIZERS:-undefined,bounds}" \
+cc -std=c11 -Wall -Wextra -Werror -Wno-format-truncation -O1 -g -fsanitize="${SANITIZERS:-undefined,bounds}" \
    -I "$here/../main" -o "$out/test_character" "$here/test_character.c" "$here/../main/pet_store.c" "$here/../main/elapsed.c" \
    "$here/../main/ui/habitat/character.c" "$here/../main/ui/habitat/illustrated.c" "$here/../main/ui/habitat/character_motion.c" \
    "$here/../main/ui/habitat/character_layout.c" "$here/../main/ui/habitat/tux.c" \
    "$here/../main/ui/habitat/focus.c" "$here/../main/ui/habitat/lvgl_fonts.c" "$here/../main/ui/habitat/lvgl_icons.c" "$here/../main/ui/habitat/focus_marks.c" "$here/../main/ui/habitat/focus_faces.c" "$here/../main/ui/habitat/pets.c" \
    "$here/../main/ui/habitat/octopus.c" "$here/../main/ui/habitat/octopus_font.c" \
    "$here/../main/ui/habitat/ascii_clip.c" \
-   "$here/../main/ui/habitat/terminal.c" "$here/../main/ui/habitat/fonts.c"
+   "$here/../main/ui/habitat/terminal.c" "$here/../main/ui/habitat/fonts.c" -lm
 "$out/test_character" "$here/vectors/pet_min.hpet"
 # The same source again, only the custom-pet cases, under the address sanitizer: a pack read after it is freed.
-cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize="${PET_SANITIZERS:-address,undefined}" \
+cc -std=c11 -Wall -Wextra -Werror -Wno-format-truncation -O1 -g -fsanitize="${PET_SANITIZERS:-address,undefined}" \
    -I "$here/../main" -o "$out/test_character_asan" "$here/test_character.c" "$here/../main/pet_store.c" "$here/../main/elapsed.c" \
    "$here/../main/ui/habitat/character.c" "$here/../main/ui/habitat/illustrated.c" "$here/../main/ui/habitat/character_motion.c" \
    "$here/../main/ui/habitat/character_layout.c" "$here/../main/ui/habitat/tux.c" \

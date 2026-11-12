@@ -26,7 +26,8 @@ static bool cJSON_IsString(const cJSON *v){return v && v->type==STRING;}
 static bool cJSON_IsNumber(const cJSON *v){return v && v->type==NUMBER;}
 static bool cJSON_IsTrue(const cJSON *v){return v && v->type==TRUE;}
 static const cJSON *cJSON_GetObjectItemCaseSensitive(const cJSON *v,const char *key){
-    for(const cJSON *p=v?v->child:NULL;p;p=p->next)if(p->string && !strcmp(p->string,key))return p;return NULL;
+    for(const cJSON *p=v?v->child:NULL;p;p=p->next) { if(p->string && !strcmp(p->string,key)) return p; }
+    return NULL;
 }
 static cJSON object(cJSON *children,int n){for(int i=0;i<n;i++)children[i].next=i+1<n?&children[i+1]:NULL;return(cJSON){.child=children};}
 static ht_selection_t selection;

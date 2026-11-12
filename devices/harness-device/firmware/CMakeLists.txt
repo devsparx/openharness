@@ -71,5 +71,12 @@ endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
+# The LilyGo T-RGB port is a local development image: report a version far above anything the
+# update manifest will ever publish, so the daemon never offers (and never auto-pushes) a dial
+# image over USB — flashing the CO5300 dial firmware onto this board would brick the display.
+# The board name in `hello.hw` already says lilygo-trgb; this only guards the version compare.
+if(TRGB_BOARD)
+    set(PROJECT_VER "9.9.9")
+endif()
 
 project(interns_commander)

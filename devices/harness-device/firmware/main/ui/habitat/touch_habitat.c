@@ -4,6 +4,10 @@
 #include "board.h"
 #include "board_pins.h"
 #include "board_i2c.h"
+#if BOARD_TRGB
+#include "touch_cst820.h"
+#include "xl9555.h"
+#endif
 #include "driver/i2c_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_touch_cst816s.h"
@@ -34,20 +38,27 @@ static bool open_touch(void)
     if (b->touch == TOUCH_NONE)
         return false;
     esp_lcd_panel_io_i2c_config_t c =
-        b->touch == TOUCH_CST816S
+        b->touch == TOUCH_CST816S || b->touch == TOUCH_CST820
             ? (esp_lcd_panel_io_i2c_config_t)ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG()
             : (esp_lcd_panel_io_i2c_config_t)ESP_LCD_TOUCH_IO_I2C_CST9217_CONFIG();
     c.scl_speed_hz = BSP_I2C_FREQ_HZ;
     if (esp_lcd_new_panel_io_i2c(board_i2c_get(), &c, &io) != ESP_OK)
         return false;
-    esp_lcd_touch_config_t t = {.x_max = 466,
-                                .y_max = 466,
-                                .rst_gpio_num = b->touch_rst,
+    esp_lcd_touch_config_t t = {.x_max = BSP_LCD_H_RES,
+                                .y_max = BSP_LCD_V_RES,
+                                .rst_gpio_num = b->touch_rst,   // -1 on the T-RGB: reset is the
+                                                                // XL9555 pulse in board_detect()
                                 .int_gpio_num = BSP_TOUCH_INT,
                                 .flags = {.mirror_x = b->touch_mirror, .mirror_y = b->touch_mirror},
                                 .interrupt_callback = touch_irq};
-    esp_err_t err = b->touch == TOUCH_CST816S ? esp_lcd_touch_new_i2c_cst816s(io, &t, &controller)
-                                              : esp_lcd_touch_new_i2c_cst9217(io, &t, &controller);
+    esp_err_t err;
+    switch (b->touch) {
+    case TOUCH_CST816S: err = esp_lcd_touch_new_i2c_cst816s(io, &t, &controller); break;
+#if BOARD_TRGB
+    case TOUCH_CST820:  err = esp_lcd_touch_new_i2c_cst820(io, &t, &controller);  break;
+#endif
+    default:            err = esp_lcd_touch_new_i2c_cst9217(io, &t, &controller);  break;
+    }
     if (err != ESP_OK) {
         controller = NULL;
         esp_lcd_panel_io_del(io);
@@ -68,6 +79,11 @@ static void task(void *arg)
         int64_t now = esp_timer_get_time();
         if (!controller) {
             if (now >= retry_at) {
+#if BOARD_TRGB
+                // The CST820 sleeps hard when idle; a driver that never gets past its ID read
+                // must be woken by the expander reset before we ask again.
+                xl9555_touch_reset();
+#endif
                 open_touch();
                 retry_at = now + 5000000;
             }
@@ -82,6 +98,15 @@ static void task(void *arg)
             errors = 0;
             down = esp_lcd_touch_get_coordinates(controller, &x, &y, &strength, &count, 1) &&
                    count > 0;
+#if BOARD_TRGB
+            // Panel space → face space: the 466 face is blitted 7px in from the 480 glass.
+            if (down) {
+                const uint16_t xo = (BSP_LCD_H_RES - HT_WIDTH) / 2;
+                const uint16_t yo = (BSP_LCD_V_RES - HT_HEIGHT) / 2;
+                x = x > xo ? x - xo : 0;
+                y = y > yo ? y - yo : 0;
+            }
+#endif
             // A malformed controller coordinate must never become an action or a swipe.
             if (down && (x >= HT_WIDTH || y >= HT_HEIGHT)) {
                 down = false;

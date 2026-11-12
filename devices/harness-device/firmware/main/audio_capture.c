@@ -2,6 +2,7 @@
 #include "config_store.h"
 #include "audio_probe.h"
 #include "board_pins.h"
+#include "board/board.h"
 #include "board/board_i2c.h"
 #include "driver/i2s_std.h"
 #include "esp_codec_dev.h"
@@ -121,6 +122,13 @@ static void notify_init_failed(const char *why)
 
 void audio_notify_init(void)
 {
+#if BOARD_TRGB
+    // The LilyGo T-RGB has no ES8311 speaker codec: beeps stay silent. Everything that checks
+    // notification state reads the atomic below, which keeps working — and s_spk stays NULL, so
+    // the beep path's existing guard never reaches the codec.
+    ESP_LOGI(TAG, "no speaker codec on this board — turn-end beeps off");
+    return;
+#else
 #ifdef DEVICE_CREATURE_GALLERY
     atomic_store_explicit(&s_muted, true, memory_order_relaxed);
     ESP_LOGI(TAG, "notifications muted (local ASCII gallery)");
@@ -167,6 +175,7 @@ void audio_notify_init(void)
         return;
     }
     ESP_LOGI(TAG, "speaker (ES8311) ready");
+#endif
 }
 
 void audio_notify_done(void)
@@ -198,6 +207,12 @@ static bool capture_init_failed(const char *why)
 
 bool audio_capture_init(void)
 {
+#if BOARD_TRGB
+    // No ES7210/ES8311 on the LilyGo T-RGB — no mic, no speaker. Fail closed with one honest
+    // log instead of driving I2S pins that are wired to the RGB panel on this board.
+    ESP_LOGE(TAG, "no audio codec on this board — capture unavailable");
+    return false;
+#else
     if (s_mic) return true;
     if (!s_codec_lock) s_codec_lock=xSemaphoreCreateMutex();
     if (!s_codec_lock) return false;
@@ -213,9 +228,12 @@ bool audio_capture_init(void)
         .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(AUDIO_SAMPLE_RATE),
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
-            .mclk = BSP_I2S_MCLK,
+            .mclk = board()->mclk_gpio,
             .bclk = BSP_I2S_BCLK,
             .ws = BSP_I2S_WS,
+            // The retail Waveshare 1.75 BSP names these from the ESP's perspective: DOUT is the
+            // ESP→codec playback line (GPIO8), DIN is the codec→ESP mic line (GPIO10), MCLK is
+            // board-dependent (GPIO42 on retail Waveshare, GPIO16 on autonomous dial PCB).
             .dout = BSP_I2S_DOUT,
             .din = BSP_I2S_DIN,
             .invert_flags = { .mclk_inv = false, .bclk_inv = false, .ws_inv = false },
@@ -259,6 +277,7 @@ bool audio_capture_init(void)
     if (!s_mic) return capture_init_failed("device allocation");
     ESP_LOGI(TAG, "mic (ES7210) ready");
     return true;
+#endif
 }
 
 bool audio_capture_start(void)

@@ -22,6 +22,9 @@ code = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include "audio_capture.h"
+typedef struct { int mclk_gpio; } mock_board_t;
+static const mock_board_t s_mock_board = { .mclk_gpio = 0 };
+static inline const mock_board_t *board(void) { return &s_mock_board; }
 #define DEVICE_HABITAT 1
 #define ESP_OK 0
 #define pdPASS 1
@@ -129,7 +132,7 @@ int main(void) {
 with tempfile.TemporaryDirectory(prefix='harness-audio-init-') as folder:
     out = Path(folder)
     (out / 'init.c').write_text(code)
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O1', '-g',
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-misleading-indentation', '-O1', '-g',
                     '-fsanitize=' + os.environ.get('SANITIZERS', 'undefined,bounds'),
                     '-I', str(main), str(out / 'init.c'), '-o', str(out / 'init')], check=True)
     subprocess.run([str(out / 'init')], check=True)

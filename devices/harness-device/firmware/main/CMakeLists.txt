@@ -76,6 +76,18 @@ set(BOARD_SRCS
     "ui/habitat/pets.c"
 )
 
+# The LilyGo T-RGB port: ST7701S RGB bring-up and the XL9555 expander driver, compiled in only
+# for -DTRGB_BOARD=1 builds (see board/pins_trgb.h). A build-time flag like DEVICE_ALL_SKINS, not
+# a Kconfig symbol — this project's sdkconfig flow treats unknown defaults-file symbols as
+# warnings and drops them, which silently shipped a dial image for this port once.
+if(TRGB_BOARD)
+    list(APPEND BOARD_SRCS
+        "board/xl9555.c"
+        "board/touch_cst820.c"
+        "ui/habitat/panel_trgb.c"
+    )
+endif()
+
 set(BOARD_REQUIRES
     nvs_flash
     esp_wifi
@@ -122,6 +134,11 @@ target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-format-truncation)
 
 if(DEVICE_HABITAT_ORANGE)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE DEVICE_HABITAT_ORANGE=1)
+endif()
+
+# LilyGo T-RGB 2.1" board variant (see board/pins_trgb.h): -DTRGB_BOARD=1.
+if(TRGB_BOARD)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE BOARD_TRGB=1)
 endif()
 
 # Focus and nothing else until the companion skins are finished (owner, 2026-09-30); the host tests

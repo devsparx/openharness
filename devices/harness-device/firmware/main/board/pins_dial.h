@@ -33,12 +33,16 @@
 
 // ---- Audio: dual-mic → ES7210 ADC (capture) + ES8311 codec, on the shared I2C; I2S bus ----
 // Mic capture (ES7210) only in v1.
-#define BSP_I2S_MCLK         16           // MCLK is GPIO16 on the shipped board (not 42)
+// MCLK is board-dependent: board()->mclk_gpio (board.h).
+// Retail Waveshare 1.75 routes MCLK from GPIO42; autonomous dial PCB routes from GPIO16.
+#define BSP_I2S_MCLK_WAVESHARE   42
+#define BSP_I2S_MCLK_AUTONOMOUS  16
+#define BSP_I2S_MCLK             42
 #define BSP_I2S_BCLK         9
 #define BSP_I2S_WS           45
-#define BSP_I2S_DOUT         8            // codec → ESP (mic data in to ESP)
-#define BSP_I2S_DIN          10           // ESP → codec (speaker; unused for mic-only)
-#define BSP_PA_IO            46           // speaker power-amp enable (unused for mic-only)
+#define BSP_I2S_DOUT         8            // ESP → codec ES8311 DSDIN (playback; BSP names are
+#define BSP_I2S_DIN          10           // ESP ← codec ES7210 SDOUT1 (mic capture)  ESP-view)
+#define BSP_PA_IO            46           // speaker power-amp enable
 // ES7210 (ADC) + ES8311 (codec) default I2C addresses (esp_codec_dev defaults).
 
 // ---- Buttons ----

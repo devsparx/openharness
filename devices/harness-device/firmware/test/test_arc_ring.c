@@ -2,6 +2,7 @@
 //   ink lies in the band and the span, the band's solid core is all ink, the run's bounds contain every inked
 //   pixel, a strip raster equals the same strip of the full raster, an empty placeholder draws and bounds nothing,
 //   and the damage of a change from one ring to another covers every pixel that differs.
+#define _DEFAULT_SOURCE
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -60,7 +61,10 @@ static void check(const ring_t *r)
             // The solid core (a pixel in from both band edges, a degree in from the ends) is all ink.
             if (fabs(d - rad) <= half_w - 0.6 && d > 1.5 && off <= r->half - 1.0) {
                 core++;
-                if (!(inked && full[y * HT_WIDTH + x] == 0x00f8)) fprintf(stderr, "ring %d x %d y %d d %.2f off %.2f px %04x\n", (int)(r - RINGS), x, y, d, off, full[y * HT_WIDTH + x]); assert(inked && full[y * HT_WIDTH + x] == 0x00f8);                          // panel order: byte-swapped red
+                if (!(inked && full[y * HT_WIDTH + x] == 0x00f8)) {
+                    fprintf(stderr, "ring %d x %d y %d d %.2f off %.2f px %04x\n", (int)(r - RINGS), x, y, d, off, full[y * HT_WIDTH + x]);
+                }
+                assert(inked && full[y * HT_WIDTH + x] == 0x00f8);                          // panel order: byte-swapped red
             }
         }
     assert(ink > 0 && core > 0);

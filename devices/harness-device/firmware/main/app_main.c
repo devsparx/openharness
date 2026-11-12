@@ -198,6 +198,12 @@ void app_main(void)
 
     // Reserve the PSRAM voice buffer now, while the heap is still unfragmented — a large contiguous block
     // is hard to get later even with megabytes free.
+    //
+    // The T-RGB carries no ES7210/ES8311 codecs, no mic and no speaker: the whole audio path stays
+    // off. The daemon only learns voice state from frames the device sends, so a dial with no
+    // audio never advertises a working mic; if a voice.begin arrives anyway, audio_capture_start
+    // fails closed with a log line.
+#if !BOARD_TRGB
     audio_client_init();
     ram_telemetry_checkpoint("voice_buffer_ready");
 
@@ -208,6 +214,7 @@ void app_main(void)
     // Enable physical PTT after codec initialization. Otherwise holding the
     // button during boot can race the microphone's first allocation.
     ptt_start();
+#endif
 
     // Agents have not arrived yet — don't flash the "No agents" empty tile. Park on the loading screen and
     // arm a landing so refresh_projects slides to agent 0 once the first list lands.

@@ -10,6 +10,7 @@
 // Every stream case is replayed TWICE: once with the whole input handed over at once, and once a byte at
 // a time. The second is not redundant on the day someone rewrites feed() to work in blocks — the split
 // that matters is a frame's magic pair straddling two reads, and it only ever happens on a real cable.
+#define _POSIX_C_SOURCE 200809L
 #include "../main/cable_frame.h"
 
 #include <stdio.h>

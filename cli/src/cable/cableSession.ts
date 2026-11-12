@@ -2275,6 +2275,7 @@ export class CableSession {
       return
     }
     if (!current()) return
+    this.log(`cable: voice transcript: "${transcript}"`)
     if (!transcript) {
       this.cancelFormVoice()
       this.cancelSearchVoice()
